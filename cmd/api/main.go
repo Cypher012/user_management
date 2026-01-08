@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 
+	"github.com/Cypher012/userauth/internal/auth"
+	"github.com/Cypher012/userauth/internal/common"
 	"github.com/Cypher012/userauth/internal/db"
 	"github.com/joho/godotenv"
 )
@@ -15,16 +16,23 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	secret, err := common.GetEnv("JWT_SECRET")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ctx := context.Background()
+	jwt := auth.NewJWTAuth(secret)
 
 	dbPool := db.NewDB(ctx)
 	defer dbPool.Close()
 
-	r := NewRouter(dbPool)
+	r := NewRouter(dbPool, jwt)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		log.Fatal("PORT not found in .env file")
+	port, err := common.GetEnv("PORT")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	log.Printf("server running on :%v", port)

@@ -13,6 +13,7 @@ import (
 
 var ErrUserNotFound = errors.New("user not found")
 var ErrUserAlreadyExists = errors.New("user already exists")
+var ErrEmailNotFound = errors.New("email not found")
 
 const pgUniqueViolation = "23505"
 
@@ -91,6 +92,13 @@ func (r *AuthRepository) UpdateUserPassword(ctx context.Context, userId string, 
 	})
 }
 
-func (r *AuthRepository) EmailExists(ctx context.Context, email string) (bool, error) {
-	return r.q.EmailExists(ctx, email)
+func (r *AuthRepository) EmailExists(ctx context.Context, email string) error {
+	exists, err := r.q.EmailExists(ctx, email)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrEmailNotFound
+	}
+	return nil
 }
