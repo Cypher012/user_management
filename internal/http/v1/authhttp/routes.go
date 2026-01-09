@@ -4,14 +4,15 @@ import (
 	"net/http"
 
 	"github.com/Cypher012/userauth/internal/auth"
+	"github.com/Cypher012/userauth/internal/email"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RegisterAuth(r chi.Router, pool *pgxpool.Pool, jwt *auth.JWTAuth) {
+func RegisterAuth(r chi.Router, pool *pgxpool.Pool, jwt *auth.JWTAuth, email *email.Service) {
 	repo := auth.NewAuthRepository(pool)
 	service := auth.NewAuthService(repo)
-	handler := NewAuthHandler(service, jwt)
+	handler := NewAuthHandler(service, jwt, email)
 
 	r.Route("/v1/auth", func(r chi.Router) {
 		r.Post("/signup", handler.SignUpHandler)

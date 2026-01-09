@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Cypher012/userauth/internal/auth"
+	"github.com/Cypher012/userauth/internal/email"
 	"github.com/Cypher012/userauth/internal/http/v1/authhttp"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -19,8 +20,10 @@ func NewRouter(pool *pgxpool.Pool, jwt *auth.JWTAuth) chi.Router {
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(middleware.Heartbeat("/ok"))
 
+	emailService := email.EmailConfig()
+
 	r.Route("/api", func(r chi.Router) {
-		authhttp.RegisterAuth(r, pool, jwt)
+		authhttp.RegisterAuth(r, pool, jwt, emailService)
 	})
 
 	return r
