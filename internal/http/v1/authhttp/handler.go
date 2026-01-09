@@ -5,21 +5,18 @@ import (
 	"net/http"
 
 	"github.com/Cypher012/userauth/internal/auth"
-	"github.com/Cypher012/userauth/internal/email"
 	"github.com/Cypher012/userauth/internal/http/httputil"
 )
 
 type AuthHandler struct {
 	service *auth.AuthService
 	jwt     *auth.JWTAuth
-	email   *email.Service
 }
 
-func NewAuthHandler(service *auth.AuthService, jwt *auth.JWTAuth, email *email.Service) *AuthHandler {
+func NewAuthHandler(service *auth.AuthService, jwt *auth.JWTAuth) *AuthHandler {
 	return &AuthHandler{
 		service: service,
 		jwt:     jwt,
-		email:   email,
 	}
 }
 

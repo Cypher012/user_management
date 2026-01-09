@@ -12,7 +12,7 @@ func NewService(sender Sender, templates *Template) *Service {
 	}
 }
 
-func (s *Service) SendWelcome(to string) error {
+func (s *Service) SendWelcomeEmail(to string) error {
 	html, err := render(s.templates.welcome, nil)
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func (s *Service) SendVerifyEmail(to, token string) error {
 	return s.sender.Send(to, "Verify your email", html)
 }
 
-func (s *Service) SendResetPassword(to, token string) error {
+func (s *Service) SendResetPasswordEmail(to, token string) error {
 	html, err := render(s.templates.reset, map[string]string{
 		"Token": token,
 	})

@@ -96,6 +96,16 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type EmailToken struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	TokenHash string
+	Type      string
+	ExpiresAt pgtype.Timestamp
+	UsedAt    pgtype.Timestamp
+	CreatedAt pgtype.Timestamp
+}
+
 type Profile struct {
 	ID          pgtype.UUID
 	UserID      pgtype.UUID

@@ -6,7 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/Cypher012/userauth/internal/common"
+	"github.com/Cypher012/userauth/internal/email"
+	"github.com/Cypher012/userauth/internal/security"
+	"github.com/Cypher012/userauth/internal/token"
 )
 
 var (
@@ -23,12 +25,16 @@ type User struct {
 }
 
 type AuthService struct {
-	repo *AuthRepository
+	repo  *AuthRepository
+	token *token.TokenService
+	email *email.Service
 }
 
-func NewAuthService(repo *AuthRepository) *AuthService {
+func NewAuthService(repo *AuthRepository, token *token.TokenService, email *email.Service) *AuthService {
 	return &AuthService{
-		repo: repo,
+		repo:  repo,
+		token: token,
+		email: email,
 	}
 }
 
@@ -42,7 +48,7 @@ func (s *AuthService) RegisterUser(ctx context.Context, email, password string) 
 		return User{}, err
 	}
 
-	hashedPassword, err := common.GenerateHashPassword(password)
+	hashedPassword, err := security.GenerateHashPassword(password)
 	if err != nil {
 		return User{}, ErrPasswordHash
 	}
@@ -68,7 +74,7 @@ func (s *AuthService) LoginUser(ctx context.Context, email, password string) (Us
 		return User{}, ErrInvalidLogin
 	}
 
-	if err := common.ComparePassword(user.PasswordHash, password); err != nil {
+	if err := security.ComparePassword(user.PasswordHash, password); err != nil {
 		return User{}, ErrInvalidLogin
 	}
 
@@ -79,4 +85,13 @@ func (s *AuthService) LoginUser(ctx context.Context, email, password string) (Us
 		IsActive:   user.IsActive,
 		CreatedAt:  user.CreatedAt.Time,
 	}, nil
+}
+
+func (s *AuthService) SendVerificationEmail(ctx context.Context, email, userId string) error {
+	rawToken, err := s.token.GetVerificationEmailToken(ctx, userId, email)
+	if err != nil {
+		return err
+	}
+	go s.email.SendVerifyEmail(email, rawToken)
+	return nil
 }

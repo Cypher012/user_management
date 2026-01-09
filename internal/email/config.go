@@ -2,15 +2,16 @@ package email
 
 import (
 	"log"
-	"os"
 	"strconv"
+
+	"github.com/Cypher012/userauth/internal/security"
 )
 
 func EmailConfig() *Service {
-	smtpPass := os.Getenv("BREVO_SMTP_PASS")
-	port := os.Getenv("BREVO_SMTP_PORT")
-	username := os.Getenv("BREVO_SMTP_USERNAME")
-	host := os.Getenv("BREVO_SMTP_HOST")
+	smtpPass, _ := security.GetEnv("BREVO_SMTP_PASS")
+	port, _ := security.GetEnv("BREVO_SMTP_PORT")
+	username, _ := security.GetEnv("BREVO_SMTP_USERNAME")
+	host, _ := security.GetEnv("BREVO_SMTP_HOST")
 
 	requiredEnvs := map[string]string{
 		"BREVO_SMTP_PASS":     smtpPass,
