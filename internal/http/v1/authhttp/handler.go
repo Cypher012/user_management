@@ -8,6 +8,7 @@ import (
 	"github.com/Cypher012/userauth/internal/auth"
 	"github.com/Cypher012/userauth/internal/email"
 	"github.com/Cypher012/userauth/internal/http/httputil"
+	"github.com/go-chi/chi/v5"
 )
 
 type AuthHandler struct {
@@ -129,6 +130,15 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	rawToken := chi.URLParam(r, "token")
+
+	if err := h.service.VerifyEmailVerificationToken(r.Context(), rawToken); err != nil {
+		http.ServeFile(w, r, "internal/web/verify_error.html")
+		return
+	}
+
+	http.ServeFile(w, r, "internal/web/verify_success.html")
 }
 
 func (h *AuthHandler) ResendVerifyHandler(w http.ResponseWriter, r *http.Request) {

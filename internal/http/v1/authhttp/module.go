@@ -27,7 +27,7 @@ func NewModule(
 
 	r.Post("/signup", handler.SignUpHandler)
 	r.Post("/login", handler.LoginHandler)
-	r.Post("/verify-email/{token}", handler.VerifyEmailHandler)
+	r.Get("/verify-email/{token}", handler.VerifyEmailHandler)
 	r.Post("/verify-email/resend", handler.ResendVerifyHandler)
 	r.Post("/forget-password", handler.ForgetPasswordHandler)
 	r.Post("/reset-password", handler.ResetPasswordHandler)

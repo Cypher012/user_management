@@ -35,16 +35,18 @@ func (s *TokenService) CreateVerificationEmailToken(ctx context.Context, userId,
 	return rawToken, nil
 }
 
-func (s *TokenService) VerifyEmailToken(ctx context.Context, rawToken string) error {
+func (s *TokenService) VerifyEmailToken(ctx context.Context, rawToken string) (userId string, err error) {
 	hash := security.HashTokenKey(rawToken, s.email_token_secret)
 	token, err := s.repo.GetValidEmailToken(ctx, hash, VerifyEmailTokenType)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err := s.repo.MarkEmailTokenUsed(ctx, token.ID.String()); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	userId = token.UserID.String()
+
+	return userId, nil
 }

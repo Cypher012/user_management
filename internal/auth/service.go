@@ -90,3 +90,11 @@ func (s *AuthService) CreateVerificationToken(
 ) (string, error) {
 	return s.token.CreateVerificationEmailToken(ctx, userID, email)
 }
+
+func (s *AuthService) VerifyEmailVerificationToken(ctx context.Context, rawToken string) error {
+	userId, err := s.token.VerifyEmailToken(ctx, rawToken)
+	if err != nil {
+		return err
+	}
+	return s.repo.SetUserEmailVerified(ctx, userId)
+}
