@@ -1,11 +1,10 @@
 package authhttp
 
 type Auth struct {
-	Atk string `json:"token"`
-	Rtk string `json:"rtk"`
+	Token string `json:"token"`
 }
 
 type UserResponse struct {
 	Message string `json:"message"`
-	Auth
+	Auth    `json:"auth"`
 }

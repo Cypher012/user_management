@@ -39,9 +39,7 @@ func NewRouter(pool *pgxpool.Pool, jwt *auth.JWTAuth) chi.Router {
 
 	authModule := authhttp.NewModule(pool, tokenSvc, emailSvc, jwt)
 
-	r.Route("/api/v1/auth", func(r chi.Router) {
-		r.Mount("/", authModule.Router)
-	})
+	r.Mount("/api/v1/auth", authModule.Router)
 
 	return r
 }

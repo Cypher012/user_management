@@ -28,9 +28,9 @@ func NewModule(
 	r.Post("/signup", handler.SignUpHandler)
 	r.Post("/login", handler.LoginHandler)
 	r.Get("/verify-email/{token}", handler.VerifyEmailHandler)
-	r.Post("/verify-email/resend", handler.ResendVerifyHandler)
+	r.With(jwt.AccessMiddleware).Post("/verify-email/resend", handler.ResendVerifyEmailHandler)
 	r.Post("/forget-password", handler.ForgetPasswordHandler)
-	r.Post("/reset-password", handler.ResetPasswordHandler)
+	r.Post("/reset-password/{token}", handler.ResetPasswordHandler)
 
 	r.With(jwt.RefreshMiddleware).
 		Post("/refresh", handler.RefreshTokenHandler)

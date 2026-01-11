@@ -19,7 +19,7 @@ func NewTokenService(repo *TokenRepo, email_token_secret string) *TokenService {
 	}
 }
 
-func (s *TokenService) CreateVerificationEmailToken(ctx context.Context, userId, email string) (rawToken string, err error) {
+func (s *TokenService) CreateToken(ctx context.Context, userId string, token_type TokenType) (rawToken string, err error) {
 	rawToken, err = security.GenerateToken()
 	if err != nil {
 		return "", err
@@ -28,16 +28,16 @@ func (s *TokenService) CreateVerificationEmailToken(ctx context.Context, userId,
 	hash := security.HashTokenKey(rawToken, s.email_token_secret)
 
 	expires := time.Now().Add(1 * time.Hour)
-	if err := s.repo.Create(ctx, userId, hash, VerifyEmailTokenType, expires); err != nil {
+	if err := s.repo.Create(ctx, userId, hash, token_type, expires); err != nil {
 		return "", err
 	}
 
 	return rawToken, nil
 }
 
-func (s *TokenService) VerifyEmailToken(ctx context.Context, rawToken string) (userId string, err error) {
+func (s *TokenService) VerifyToken(ctx context.Context, rawToken string, tokenType TokenType) (userId string, err error) {
 	hash := security.HashTokenKey(rawToken, s.email_token_secret)
-	token, err := s.repo.GetValidEmailToken(ctx, hash, VerifyEmailTokenType)
+	token, err := s.repo.GetValidEmailToken(ctx, hash, tokenType)
 	if err != nil {
 		return "", err
 	}

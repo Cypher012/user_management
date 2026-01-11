@@ -107,7 +107,7 @@ func (j *JWTAuth) RefreshMiddleware(next http.Handler) http.Handler {
 	}))
 }
 
-func (j *JWTAuth) FromContext(ctx context.Context, user_id string) (Claims, error) {
+func (j *JWTAuth) FromContext(ctx context.Context) (Claims, error) {
 	_, rawClaims, err := jwtauth.FromContext(ctx)
 	if err != nil {
 		return Claims{}, err

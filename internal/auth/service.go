@@ -24,14 +24,18 @@ type User struct {
 }
 
 type AuthService struct {
-	repo  *AuthRepository
-	token *token.TokenService
+	repo                    *AuthRepository
+	token                   *token.TokenService
+	verifyEmailTokenType    token.TokenType
+	forgetPasswordTokenType token.TokenType
 }
 
-func NewAuthService(repo *AuthRepository, token *token.TokenService) *AuthService {
+func NewAuthService(repo *AuthRepository, tokenSvc *token.TokenService) *AuthService {
 	return &AuthService{
-		repo:  repo,
-		token: token,
+		repo:                    repo,
+		token:                   tokenSvc,
+		verifyEmailTokenType:    token.VerifyEmailTokenType,
+		forgetPasswordTokenType: token.ForgetPasswordTokenType,
 	}
 }
 
@@ -84,17 +88,61 @@ func (s *AuthService) LoginUser(ctx context.Context, email, password string) (Us
 	}, nil
 }
 
-func (s *AuthService) CreateVerificationToken(
+func (s *AuthService) CreateEmailVerificationToken(
 	ctx context.Context,
-	userID, email string,
+	userID string,
 ) (string, error) {
-	return s.token.CreateVerificationEmailToken(ctx, userID, email)
+	return s.token.CreateToken(ctx, userID, s.verifyEmailTokenType)
 }
 
 func (s *AuthService) VerifyEmailVerificationToken(ctx context.Context, rawToken string) error {
-	userId, err := s.token.VerifyEmailToken(ctx, rawToken)
+	userId, err := s.token.VerifyToken(ctx, rawToken, s.verifyEmailTokenType)
 	if err != nil {
 		return err
 	}
 	return s.repo.SetUserEmailVerified(ctx, userId)
+}
+
+func (s *AuthService) CreateForgetPasswordToken(
+	ctx context.Context,
+	email string,
+) (string, error) {
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return "", ErrUserNotFound
+	}
+
+	return s.token.CreateToken(ctx, user.ID.String(), s.forgetPasswordTokenType)
+}
+
+func (s *AuthService) VerifyResetPasswordToken(ctx context.Context, rawToken string) (string, error) {
+	userID, err := s.token.VerifyToken(ctx, rawToken, s.forgetPasswordTokenType)
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
+}
+
+func (s *AuthService) ChangePassword(ctx context.Context, userId, password string) error {
+	hashed, err := security.GenerateHashPassword(password)
+	if err != nil {
+		return ErrPasswordHash
+	}
+	return s.repo.UpdateUserPassword(ctx, userId, hashed)
+}
+
+func (s *AuthService) CreateResendEmailVerificationToken(
+	ctx context.Context,
+	userID string,
+) (rawToken string, email string, err error) {
+	user, err := s.repo.GetUserById(ctx, userID)
+	if err != nil {
+		return "", "", ErrUserNotFound
+	}
+	rawToken, err = s.token.CreateToken(ctx, userID, s.verifyEmailTokenType)
+	if err != nil {
+		return "", "", err
+	}
+
+	return rawToken, user.Email, nil
 }

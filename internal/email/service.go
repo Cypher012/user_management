@@ -42,9 +42,9 @@ func (s *EmailService) SendVerifyEmail(to, token string) error {
 }
 
 func (s *EmailService) SendForgetPasswordEmail(to, token string) error {
-	forgetPasswordURL := s.links.ForgetPassword(token)
-	html, err := render(s.templates.forget, map[string]string{
-		"forget_password_url": forgetPasswordURL,
+	resetPasswordURL := s.links.ResetPassword(token)
+	html, err := render(s.templates.reset, map[string]string{
+		"reset_password_url": resetPasswordURL,
 	})
 	if err != nil {
 		return err

@@ -56,15 +56,16 @@ func (h *AuthHandler) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawToken, err := h.service.CreateVerificationToken(
+	rawToken, err := h.service.CreateEmailVerificationToken(
 		r.Context(),
 		user.ID,
-		user.Email,
 	)
 	if err != nil {
 		httputil.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	auth.SetRefreshCookies(w, rtkToken)
 
 	go func(email, token string) {
 		log.Printf("sending verify email to %s...", email)
@@ -76,10 +77,9 @@ func (h *AuthHandler) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	}(user.Email, rawToken)
 
 	payload := UserResponse{
-		Message: "User sign up succesful",
+		Message: "User sign up succesful, check mail to verify email",
 		Auth: Auth{
-			Atk: atkToken,
-			Rtk: rtkToken,
+			Token: atkToken,
 		},
 	}
 
@@ -112,16 +112,18 @@ func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	atkToken, rtkToken, err := h.jwt.GenerateToken(user.ID)
+
 	if err != nil {
 		httputil.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	auth.SetRefreshCookies(w, rtkToken)
+
 	payload := UserResponse{
 		Message: "User sign in successful",
 		Auth: Auth{
-			Atk: atkToken,
-			Rtk: rtkToken,
+			Token: atkToken,
 		},
 	}
 
@@ -141,16 +143,107 @@ func (h *AuthHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 	http.ServeFile(w, r, "internal/web/verify_success.html")
 }
 
-func (h *AuthHandler) ResendVerifyHandler(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) ResendVerifyEmailHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	claims, err := h.jwt.FromContext(r.Context())
+	if err != nil {
+		httputil.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+	}
+
+	userId := claims.UserId
+
+	rawToken, email, err := h.service.CreateResendEmailVerificationToken(r.Context(), userId)
+
+	if err != nil {
+		httputil.ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	go func(email, token string) {
+		log.Printf("sending verify email to %s...", email)
+		if err := h.email.SendVerifyEmail(email, token); err != nil {
+			log.Printf("verify email failed: %v", err)
+		} else {
+			log.Printf("verify email sent successfully to %s", email)
+		}
+	}(email, rawToken)
+
+	payload := map[string]string{
+		"Message": "Check email to veify email",
+	}
+
+	httputil.JSONReponse(w, http.StatusOK, payload)
 }
 
 func (h *AuthHandler) ForgetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	var req ForgetPasswordRequest
+
+	if !httputil.DecodeJSONBody[ForgetPasswordRequest](w, r, &req) {
+		return
+	}
+
+	if req.Email == "" {
+		httputil.ErrorResponse(w, http.StatusBadRequest, "Email field is required")
+		return
+	}
+
+	rawToken, err := h.service.CreateForgetPasswordToken(r.Context(), req.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, auth.ErrUserNotFound):
+			httputil.ErrorResponse(w, http.StatusUnauthorized, err.Error())
+		default:
+			httputil.ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	go func(email, token string) {
+		log.Printf("sending forget password email to %s...", email)
+		if err := h.email.SendForgetPasswordEmail(email, token); err != nil {
+			log.Printf("forget password email failed: %v", err)
+		} else {
+			log.Printf("forget password email sent successfully to %s", email)
+		}
+	}(req.Email, rawToken)
+
+	payload := map[string]string{
+		"Message": "Check email to reset password",
+	}
+
+	httputil.JSONReponse(w, http.StatusOK, payload)
 }
 
 func (h *AuthHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	rawToken := chi.URLParam(r, "token")
+	var req ResetPasswordRequest
+
+	if !httputil.DecodeJSONBody[ResetPasswordRequest](w, r, &req) {
+		return
+	}
+
+	userId, err := h.service.VerifyResetPasswordToken(r.Context(), rawToken)
+	if err != nil {
+		httputil.ErrorResponse(w, http.StatusInternalServerError, err.Error())
+	}
+
+	if err := h.service.ChangePassword(r.Context(), userId, req.Password); err != nil {
+		switch {
+		case errors.Is(err, auth.ErrPasswordHash):
+			httputil.ErrorResponse(w, http.StatusFailedDependency, err.Error())
+		default:
+			httputil.ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	payload := map[string]string{
+		"Message": "Password has been changed successfully",
+	}
+
+	httputil.JSONReponse(w, http.StatusOK, payload)
 }
 
 func (h *AuthHandler) RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
